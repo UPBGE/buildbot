@@ -4,34 +4,64 @@ from common import *
 from branch import *
 from irc import *
 from print import *
+from xvfb import *
 from sh import git, cd
 from collections import OrderedDict
+
+display = Display()
 
 branchesValid = []
 branchesCompiled = []
 branchesFailed = []
 
-def processBranch(branch, release=False, compress=True):
-	global branchesValid
-	global branchesCompiled
+def failedBranch(branch):
 	global branchesFailed
+	branchesFailed.append(branch)
 
+def compiledBranch(branch):
+	global branchesCompiled
+	branchesCompiled.append(branch)
+
+def validBranch(branch):
+	global branchesValid
 	branchesValid.append(branch)
+
+def processBranch(branch, release=False, compress=True):
+	validBranch(branch)
 	if not "--no-pull" in sys.argv:
 		branch.update()
-	if branch.needCompile() or "--force" in sys.argv:
-		branchesCompiled.append(branch)
-		if not "--no-build" in sys.argv:
-			if not branch.build():
-				#client.sendError("Failed build branch " + branch.name)
-				branchesFailed.append(branch)
-				return False
 
-		if not "--test" in sys.argv:
-			if branch.findName(release):
-				if not "--no-compress" in sys.argv and compress:
-					if branch.compress():
-						branch.writeCachedHash()
+	if not branch.needCompile() and not "--force" in sys.argv:
+		return True
+
+	compiledBranch(branch)
+
+	if not "--no-build" in sys.argv:
+		rebuild = ("--rebuild" in sys.argv)
+		if not branch.build(rebuild):
+			failedBranch(branch)
+			return False
+
+	if "--only-build" in sys.argv:
+		return True
+
+	if not branch.check():
+		failedBranch(branch)
+		return False
+
+	if not branch.findName(release):
+		failedBranch(branch)
+		return False
+
+	if "--no-compress" in sys.argv or not compress:
+		return True
+
+	if not branch.compress():
+		failedBranch(branch)
+		return False
+
+	# All operation succeed for the current compiled version.
+	branch.writeCachedHash()
 
 	return True
 
@@ -49,7 +79,6 @@ if "branch" in sys.argv:
 		branchNames = [name[15:-1] for name in branchNames if name.startswith("remotes/origin") and name != "remotes/origin/HEAD"]
 
 	with open(branchMaskFile, "a+") as mask:
-		#print(mask.read())
 		mask.seek(0)
 		maskBranch = [line[:-1] for line in mask.readlines()]
 		for branchName in branchNames:
@@ -101,7 +130,7 @@ if "release" in sys.argv:
 	if "--tag" in sys.argv:
 		tag = sys.argv[sys.argv.index("--tag") + 1]
 
-	branch = Branch(branch, tag=tag, builder=ReleaseBaseBuilder())
+	branch = Branch(branch, _hashDir=releaseHashDir, tag=tag, builder=ReleaseBaseBuilder())
 	processBranch(branch, release=True)
 
 if "debug" in sys.argv:
@@ -118,5 +147,5 @@ if "debug" in sys.argv:
 	if "--tag" in sys.argv:
 		tag = sys.argv[sys.argv.index("--tag") + 1]
 
-	branch = Branch(branch, tag=tag, builder=BranchDebugBuilder())
+	branch = Branch(branch, _hashDir=debugHashDir, tag=tag, builder=BranchDebugBuilder())
 	processBranch(branch, compress=False)

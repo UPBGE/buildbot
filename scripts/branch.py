@@ -1,20 +1,21 @@
 from builder import *
-from sender import *
 from runner import *
 from updater import *
 from compressor import *
+from checker import *
 from datetime import datetime
 
 class Branch:
-	def __init__(self, name, tag="", builder=BranchBaseBuilder(), builderDebug=BranchDebugBuilder()):
+	def __init__(self, name, tag="", _hashDir=branchHashDir, builder=BranchBaseBuilder(), builderDebug=BranchDebugBuilder()):
 		self.name = name
 		self.tag = tag
 		self.sourceDir = prefixSourceDir + "blender_" + name
 		self.buildDir = builder.prefixBuildDir + name
 		self.buildDebugDir = builderDebug.prefixBuildDir + name
 		self.blenderplayer = self.buildDir + "/bin/blenderplayer"
+		self.blender = self.buildDir + "/bin/blender"
 		self.releaseDir = releaseDir
-		self.hashFile = branchHashDir + self.name + ".txt"
+		self.hashFile = _hashDir + self.name + ".txt"
 		self.commitHash = "test"
 
 		self.logFile = open(buildLogDir + name + ".txt", "w")
@@ -25,7 +26,7 @@ class Branch:
 		self.runner = Runner()
 		self.updater = Updater()
 		self.compressor = Compressor()
-		self.sender = Sender()
+		self.checker = Checker()
 
 	def __del__(self):
 		self.logFile.close()
@@ -40,8 +41,8 @@ class Branch:
 	def writeCachedHash(self):
 		self.updater.writeCachedHash(self.hashFile, self.commitHash)
 
-	def build(self):
-		if not self.builder.build(self.name, self.sourceDir, self.buildDir):
+	def build(self, rebuild):
+		if not self.builder.build(self.name, self.sourceDir, self.buildDir, rebuild):
 			return False;
 
 		self.builder.strip(self.name, self.buildDir)
@@ -70,8 +71,8 @@ class Branch:
 	def compress(self):
 		return self.compressor.compress(self.buildDir, self.releaseArchive)
 
-	def send(self):
-		pass#return self.sender.send(self.releaseArchive, self.serverReleaseArchive)
+	def check(self):
+		return self.checker.check(self.name, (self.blender, self.blenderplayer))
 
 if __name__ == "__main__":
 	branch = Branch("ge_glsl_inverse")
@@ -80,5 +81,4 @@ if __name__ == "__main__":
 		if branch.build():
 			if branch.findName():
 				branch.compress()
-				branch.send()
 				branch.writeCachedHash()

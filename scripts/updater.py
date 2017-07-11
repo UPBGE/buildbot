@@ -30,8 +30,9 @@ class Updater:
 		if tag is not "":
 			git.checkout(tag, _out=debugSh)
 
-		git.submodule.update("--init", "--recursive", _out=debugSh)
 		git.submodule.foreach("--recursive", "git", "checkout", "master", _out=debugSh)
+		git.submodule.foreach("git", "reset", "HEAD", "--hard", _out=debugSh)
+		git.submodule.update("--init", "--recursive", _out=debugSh)
 		git.submodule.foreach("--recursive", "git", "pull", "--rebase", "origin", "master", _out=debugSh)
 
 	def getHash(self, sourceDir):

@@ -8,6 +8,7 @@ pythonapi
 source/
 trace/
 windows/
+osx/
 save/
 *__pycache__*
 version.txt
@@ -36,5 +37,5 @@ irc.sh
 .ssh/
 .subversion/
 .wine/
-
-
+.wget-hsts
+*.trace

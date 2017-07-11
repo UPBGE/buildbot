@@ -19,11 +19,14 @@ def msglog(*argv, log):
 	if logFile is not None:
 		print(*argv, file=log)
 
-def debugSh(*argv):
-	if logFile is not None:
-		print(*argv, end="", file=logFile)
-		logFile.flush()
-	print(*argv, end="")
+if "--debug" in sys.argv:
+	def debugSh(*argv):
+		if logFile is not None:
+			print(*argv, end="", file=logFile)
+			logFile.flush()
+		print(*argv, end="")
+else:
+	debugSh = None
 
 def setLogFile(file):
 	global logFile

@@ -3,7 +3,7 @@ homeDir = "/home/tristan/"
 prefixSourceDir = homeDir + "source/"
 blenderSourceDir = prefixSourceDir + "blender/"
 
-traceMainScript = homeDir + "scripts/mainloop/tracemain.py"
+traceMainScript = homeDir + "scripts/mainloop/TraceMain.py"
 traceDir = homeDir + "trace/"
 imageDir = homeDir + "image/"
 
@@ -40,7 +40,12 @@ releaseConfigFile = configDir + "release_make_config.cmake"
 liteConfigFile = configDir + "branch_make_config.cmake"
 debugConfigFile = configDir + "debug_make_config.cmake"
 
-branchHashDir = homeDir + "build_branch_hash/"
+libsListFile = configDir + "libs.txt"
+
+hashDir = homeDir + "build_hash/"
+branchHashDir = hashDir + "branch/"
+releaseHashDir = hashDir + "release/"
+releaseHashDir = hashDir + "debug/"
 branchMaskFile = configDir + "branch.mask"
 
 releaseDir = homeDir + "releases/"

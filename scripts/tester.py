@@ -2,6 +2,17 @@ from common import *
 from print import *
 from sh import Command, ErrorReturnCode, valgrind
 import os
+from threading import Thread, RLock
+
+class RunFileThread(Thread):
+	def __init__(self, tester, file):
+		Thread.__init__(self)
+		self.tester = tester
+		self.file = file
+
+	def run(self):
+		if not self.tester.runFile(self.file):
+			self.tester.addFailure(self.file)
 
 class Tester:
 	def __init__(self, branch, pythonMainScript, args):
@@ -9,21 +20,30 @@ class Tester:
 		self.blenderplayer = prefixBuildDebugDir + self.branch + "/bin/blenderplayer"
 		self.pythonMainScript = pythonMainScript
 		self.args = args
-		print(self.blenderplayer)
+		self.failures = []
+		self.lock = RLock()
+
+	def addFailure(self, file):
+		with self.lock:
+			self.failures.append(file)
 
 	def run(self):
-		failures = []
-		for subdir, dirs, files in os.walk(testFiles):
-			for file in files:
-				blendFile = subdir + os.sep + file
-				if blendFile.endswith(".blend"):
-					msgcmd("Run branch {} with file {}".format(self.branch, blendFile))
-					if not self.runFile(blendFile):
-						failures.append(blendFile)
+		files = [(s + os.sep + f) for s, d, fs in os.walk(testFiles) for f in fs if (s + os.sep + f).endswith(".blend")]
 
-		if len(failures) > 0:
+		tasks = []
+		for i, blendFile in enumerate(files):
+			msgcmd("[{:03d}/{:03d}] Run branch {} with file {}".format(i, len(files), self.branch, blendFile))
+			task = RunFileThread(self, blendFile)
+			task.start()
+			tasks.append(task)
+
+			if len(tasks) > 3:
+				tasks[0].join()
+				tasks.pop(0)
+
+		if len(self.failures) > 0:
 			msgerr("Branch %s as failures" % self.branch)
-			for fail in failures:
+			for fail in self.failures:
 				msgerr("Failed run file: %s" % fail)
 
 	def runFile(self, blendFile):
